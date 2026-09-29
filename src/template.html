@@ -1,0 +1,422 @@
+<title>視覺路徑標記測驗</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700;900&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: one working column — figure on top, answer card under it; atlas tab lists every figure with numbered pins. */
+:root{
+  --bg:#eef2f1; --panel:#ffffff; --ink:#172224; --muted:#5b6b6d; --line:#d3dcdb;
+  --pin:#00a0b0; --pin-ink:#ffffff; --pin-soft:#d6f1f3;
+  --ok:#1f8a4c; --ok-soft:#dff3e7; --bad:#c2372d; --bad-soft:#fbe4e1; --warn:#a86a00;
+  --fig-tissue:#e9ddd0; --fig-tissue2:#d8c4ae; --fig-nerve:#f6f1e6; --fig-myelin:#ece3cf; --fig-stroke:#6b5a4a;
+  --fig-bone:#bfb8ad; --fig-artery:#d23b2f; --fig-bg:#fbfaf7; --fig-vent:#bcd6e6; --fig-cortex:#f2b8a0;
+  --display:"Noto Serif TC","Songti TC",serif; --body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif; --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1719; --panel:#172225; --ink:#e4ecec; --muted:#93a4a6; --line:#2a393c;
+  --pin:#22c3d3; --pin-ink:#062226; --pin-soft:#123a40;
+  --ok:#4cc27d; --ok-soft:#133524; --bad:#ff7a6e; --bad-soft:#3d1a17; --warn:#e0a640;
+  --fig-tissue:#4a3f36; --fig-tissue2:#5e4f41; --fig-nerve:#6b6254; --fig-myelin:#80745f; --fig-stroke:#d8c8b5;
+  --fig-bone:#6e6a63; --fig-artery:#ff6b5e; --fig-bg:#1d2729; --fig-vent:#2f4f63; --fig-cortex:#8a4c3a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1719; --panel:#172225; --ink:#e4ecec; --muted:#93a4a6; --line:#2a393c;
+  --pin:#22c3d3; --pin-ink:#062226; --pin-soft:#123a40;
+  --ok:#4cc27d; --ok-soft:#133524; --bad:#ff7a6e; --bad-soft:#3d1a17; --warn:#e0a640;
+  --fig-tissue:#4a3f36; --fig-tissue2:#5e4f41; --fig-nerve:#6b6254; --fig-myelin:#80745f; --fig-stroke:#d8c8b5;
+  --fig-bone:#6e6a63; --fig-artery:#ff6b5e; --fig-bg:#1d2729; --fig-vent:#2f4f63; --fig-cortex:#8a4c3a; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.55;margin:0}
+.wrap{max-width:760px;margin:0 auto;padding-inline:16px;padding-block:18px 48px;display:flex;flex-direction:column;gap:14px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:10px}
+h1{font-family:var(--display);font-weight:900;font-size:1.6rem;margin:0;letter-spacing:.02em;text-wrap:balance}
+h1 small{display:block;font-family:var(--mono);font-size:.72rem;font-weight:500;color:var(--muted);letter-spacing:.12em;text-transform:uppercase}
+.tabs{display:flex;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:3px}
+.tabs button{border:0;background:none;color:var(--muted);font:inherit;font-weight:500;padding:6px 14px;border-radius:999px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px;min-width:0}
+.stat b{display:block;font-family:var(--mono);font-size:1.15rem;font-variant-numeric:tabular-nums}
+.stat span{font-size:.75rem;color:var(--muted)}
+.filters{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:999px;padding:4px 11px;font:inherit;font-size:.85rem;cursor:pointer}
+.chip[aria-pressed="true"]{border-color:var(--pin);background:var(--pin-soft);color:var(--ink)}
+.fig{background:var(--fig-bg);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.fig svg{display:block;width:100%;height:auto}
+.fig figcaption{display:flex;justify-content:space-between;gap:8px;padding:6px 12px;font-size:.78rem;color:var(--muted);border-top:1px solid var(--line);background:var(--panel)}
+.fig figcaption em{font-style:normal;font-family:var(--mono);font-size:.72rem}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.qhead{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:.85rem;color:var(--muted)}
+.tag{font-family:var(--mono);font-size:.72rem;letter-spacing:.06em;padding:2px 8px;border-radius:999px;background:var(--pin-soft);color:var(--ink)}
+.tag.new{background:var(--warn);color:var(--panel)}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field label{font-size:.78rem;color:var(--muted);letter-spacing:.05em}
+.field input{font:inherit;font-size:1rem;padding:10px 12px;border-radius:9px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);width:100%}
+.field input:focus{outline:none;border-color:var(--pin);box-shadow:0 0 0 3px var(--pin-soft)}
+.field.ok input{border-color:var(--ok);background:var(--ok-soft)}
+.field.bad input{border-color:var(--bad);background:var(--bad-soft)}
+.field .ans{font-size:.85rem;min-height:1.3em}
+.field.ok .ans{color:var(--ok)} .field.bad .ans{color:var(--bad)}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.btn{font:inherit;font-weight:500;border-radius:9px;padding:9px 16px;cursor:pointer;border:1.5px solid var(--line);background:var(--panel);color:var(--ink)}
+.btn.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.btn:focus-visible,.chip:focus-visible,.tabs button:focus-visible{outline:3px solid var(--pin);outline-offset:2px}
+.hint{font-size:.85rem;color:var(--muted);min-height:1.2em}
+.verdict{font-weight:700}
+.verdict.ok{color:var(--ok)} .verdict.bad{color:var(--bad)} .verdict.part{color:var(--warn)}
+.progress{display:flex;flex-wrap:wrap;gap:5px}
+.dot{font-size:.74rem;padding:2px 8px;border-radius:6px;border:1px solid var(--line);color:var(--muted);background:var(--panel)}
+.dot.s-ok{border-color:var(--ok);color:var(--ok)} .dot.s-bad{border-color:var(--bad);color:var(--bad)}
+.section-title{font-family:var(--display);font-size:1.05rem;margin:6px 0 0}
+.legend{list-style:none;margin:0;padding:10px 12px;display:grid;grid-template-columns:1fr 1fr;gap:4px 14px;font-size:.88rem;background:var(--panel)}
+.legend li{display:flex;gap:8px;align-items:baseline;min-width:0;cursor:pointer}
+.legend .n{font-family:var(--mono);font-weight:600;color:var(--pin);flex:none}
+.legend .t{min-width:0}
+.legend.hide .t{filter:blur(5px)}
+.legend li.show .t{filter:none}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.small{font-size:.8rem;color:var(--muted)}
+.linkbtn{background:none;border:0;color:var(--muted);text-decoration:underline;font:inherit;font-size:.8rem;cursor:pointer;padding:0}
+.confirm{display:flex;gap:8px;align-items:center;font-size:.8rem}
+/* svg pins */
+.pin-ring{fill:none;stroke:var(--pin);}
+.pin-dot{fill:var(--pin);stroke:#fff}
+.pin-line{stroke:var(--pin);fill:none}
+.pin-badge{fill:var(--pin);stroke:#fff}
+.pin-text{fill:var(--pin-ink);font-family:var(--mono);font-weight:600;text-anchor:middle;dominant-baseline:central}
+.pin-label{fill:#fff;font-family:var(--body);font-weight:700;paint-order:stroke;stroke:#0a1f22;stroke-linejoin:round}
+.q .pin-ring{animation:pulse 1.6s ease-out infinite;transform-box:fill-box;transform-origin:center}
+@keyframes pulse{0%{opacity:1;transform:scale(.6)}100%{opacity:0;transform:scale(1.6)}}
+@media (prefers-reduced-motion:reduce){.q .pin-ring{animation:none}}
+@media (max-width:520px){.fields{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}.legend{grid-template-columns:1fr}}
+/* diagram parts */
+.d-tissue{fill:var(--fig-tissue);stroke:var(--fig-stroke)}
+.d-tissue2{fill:var(--fig-tissue2);stroke:var(--fig-stroke)}
+.d-nerve{fill:var(--fig-nerve);stroke:var(--fig-stroke)}
+.d-myelin{fill:var(--fig-myelin);stroke:var(--fig-stroke)}
+.d-bone{fill:var(--fig-bone);stroke:var(--fig-stroke)}
+.d-art{stroke:var(--fig-artery);fill:none}
+.d-line{stroke:var(--fig-stroke);fill:none}
+.d-vent{fill:var(--fig-vent);stroke:var(--fig-stroke)}
+.d-cortex{fill:var(--fig-cortex);stroke:none}
+.d-text{fill:var(--muted);font-family:var(--body);font-size:15px}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1><small>Visual pathway · 5/11</small>視覺路徑標記測驗</h1>
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tab-quiz" aria-selected="true">測驗</button>
+      <button role="tab" id="tab-atlas" aria-selected="false">圖譜</button>
+    </div>
+  </header>
+
+  <section id="view-quiz" class="wrap" style="padding:0">
+    <div class="stats">
+      <div class="stat"><b id="st-seen">0/20</b><span>寫過的題目</span></div>
+      <div class="stat"><b id="st-new">20</b><span>還沒寫過</span></div>
+      <div class="stat"><b id="st-acc">–</b><span>中英全對率</span></div>
+      <div class="stat"><b id="st-session">0</b><span>本次作答</span></div>
+    </div>
+    <div class="filters" id="filters"></div>
+
+    <figure class="fig q" id="qfig" style="margin:0"></figure>
+
+    <form class="card" id="qform" autocomplete="off">
+      <div class="qhead"><span id="qprompt">指到的構造是什麼？寫出中文與英文</span><span class="tag" id="qtag">新題</span></div>
+      <div class="fields">
+        <div class="field" id="f-zh"><label for="in-zh">中文</label><input id="in-zh" lang="zh-Hant" placeholder="例：視交叉" enterkeyhint="next"><div class="ans" id="a-zh"></div></div>
+        <div class="field" id="f-en"><label for="in-en">English</label><input id="in-en" lang="en" autocapitalize="off" spellcheck="false" placeholder="e.g. optic chiasm" enterkeyhint="done"><div class="ans" id="a-en"></div></div>
+      </div>
+      <div class="hint" id="hint"></div>
+      <div class="actions">
+        <button class="btn primary" id="b-submit" type="submit">送出</button>
+        <button class="btn" id="b-hint" type="button">提示</button>
+        <button class="btn" id="b-skip" type="button">不會，看答案</button>
+      </div>
+    </form>
+
+    <div class="row"><span class="section-title">範圍內 20 個名詞</span>
+      <span class="confirm" id="reset-box"><button class="linkbtn" id="b-reset" type="button">清除作答紀錄</button></span></div>
+    <div class="progress" id="progress"></div>
+    <p class="small">出題方式：還沒寫過的名詞權重最高；答錯越多、最近答錯的，出現機率也越高；連續答對的會慢慢變少。紀錄只存在這台裝置的瀏覽器。</p>
+  </section>
+
+  <section id="view-atlas" hidden>
+    <p class="small">每張圖的編號對應下方清單。點清單項目可以單獨顯示答案；「遮住答案」可以拿來自我檢查。</p>
+    <div class="row"><button class="btn" id="b-blur" type="button">遮住答案</button></div>
+    <div id="atlas" style="display:flex;flex-direction:column;gap:16px;margin-top:12px"></div>
+  </section>
+</div>
+
+<script>
+const IMG = {
+  spec60:"data:image/jpeg;base64,{{spec60}}",
+  sag_bot:"data:image/jpeg;base64,{{sag_bot}}",
+  sag_top:"data:image/jpeg;base64,{{sag_top}}",
+  topview:"data:image/jpeg;base64,{{topview}}",
+  lateral:"data:image/jpeg;base64,{{lateral}}"
+};
+
+/* ---------- 名詞（範圍＝講義 5/11 表格） ---------- */
+const TERMS = [
+ {id:"on",   g:"nerve", zh:"視神經", en:"optic nerve", zhA:[], enA:["cn ii","cranial nerve ii","second cranial nerve"]},
+ {id:"pre",  g:"nerve", zh:"篩板前區", en:"prelaminar region", zhA:["篩板前"], enA:["prelaminar","prelaminar part","prelaminar portion"]},
+ {id:"retro",g:"nerve", zh:"篩板後區", en:"retrolaminar region", zhA:["篩板後"], enA:["retrolaminar","retrolaminar part","retrolaminar portion"]},
+ {id:"io",   g:"nerve", zh:"眶內段", en:"intraorbital part", zhA:["眼眶內段","眶內部"], enA:["intraorbital segment","intraorbital portion","intraorbital","orbital part","orbital segment"]},
+ {id:"ic",   g:"nerve", zh:"管內段", en:"intracanalicular part", zhA:["視神經管內段","管內部"], enA:["intracanalicular segment","intracanalicular portion","intracanalicular","canalicular part","canalicular segment"]},
+ {id:"icr",  g:"nerve", zh:"顱內段", en:"intracranial part", zhA:["顱內部"], enA:["intracranial segment","intracranial portion","intracranial"]},
+ {id:"cra",  g:"nerve", zh:"視網膜中心動脈", en:"central retinal artery", zhA:["視網膜中央動脈"], enA:["central artery of the retina","cra"]},
+ {id:"pr",   g:"retina",zh:"感光細胞", en:"photoreceptor", zhA:["光感受器","光受器","感光受器","光感受細胞"], enA:["photoreceptor cell","photoreceptors","rods and cones"]},
+ {id:"bp",   g:"retina",zh:"雙極細胞", en:"bipolar cell", zhA:[], enA:["bipolar"]},
+ {id:"gc",   g:"retina",zh:"神經節細胞", en:"ganglion cell", zhA:["視網膜神經節細胞","節細胞"], enA:["retinal ganglion cell","rgc"]},
+ {id:"ch",   g:"path",  zh:"視交叉", en:"optic chiasm", zhA:[], enA:["optic chiasma","chiasm","chiasma"]},
+ {id:"ot",   g:"path",  zh:"視徑", en:"optic tract", zhA:["視束"], enA:[]},
+ {id:"lgn",  g:"path",  zh:"外側膝狀體核", en:"lateral geniculate nuclei of the thalamus", zhA:["外側膝狀體","外側膝狀核","外側膝狀體核","丘腦外側膝狀體","視丘外側膝狀體核"], enA:["lateral geniculate nucleus","lateral geniculate nuclei","lateral geniculate body","lgn","lgb","lateral geniculate nucleus of the thalamus","lateral geniculate"]},
+ {id:"or",   g:"path",  zh:"視放射", en:"optic radiation", zhA:["視輻射"], enA:["geniculocalcarine tract","geniculostriate pathway"]},
+ {id:"meyer",g:"path",  zh:"梅氏環", en:"Meyer's loop", zhA:["梅爾氏環","邁耶環","梅耶環"], enA:["meyer loop","meyers loop","meyer-archambault loop"]},
+ {id:"baum", g:"path",  zh:"鮑氏環", en:"Baum's loop", zhA:["包氏環","鮑姆環"], enA:["baum loop","baums loop"]},
+ {id:"vc",   g:"cortex",zh:"視覺皮質", en:"visual cortex", zhA:["視皮質","視覺皮層","初級視覺皮質","紋狀皮質"], enA:["primary visual cortex","striate cortex","v1","area 17"]},
+ {id:"cal",  g:"cortex",zh:"距狀溝", en:"calcarine sulcus", zhA:["距狀裂"], enA:["calcarine fissure","calcarine"]},
+ {id:"cs",   g:"cortex",zh:"中央溝", en:"central sulcus", zhA:["羅蘭多溝"], enA:["rolandic fissure","fissure of rolando","central fissure"]},
+ {id:"po",   g:"cortex",zh:"頂枕溝", en:"parieto-occipital sulcus", zhA:["頂枕裂"], enA:["parietooccipital sulcus","parieto occipital sulcus","parieto-occipital fissure"]},
+];
+const T = Object.fromEntries(TERMS.map(t=>[t.id,t]));
+const GROUPS = [["nerve","視神經分段"],["retina","視網膜細胞"],["path","視覺路徑"],["cortex","腦溝與皮質"]];
+
+/* ---------- 圖（照片座標＝裁切後原圖像素；示意圖＝viewBox 座標） ---------- */
+const S1 = `
+ <rect width="800" height="390" fill="var(--fig-bg)"/>
+ <circle cx="165" cy="175" r="118" class="d-tissue2" stroke-width="2"/>
+ <circle cx="165" cy="175" r="106" class="d-nerve" stroke-width="1.5"/>
+ <path d="M 165 69 A 106 106 0 0 1 262 150 M 262 200 A 106 106 0 0 1 165 281" class="d-line" stroke-width="5" stroke="var(--fig-cortex)" opacity=".7"/>
+ <ellipse cx="72" cy="175" rx="16" ry="44" class="d-tissue" stroke-width="1.5"/>
+ <path d="M 50 110 Q 30 175 50 240" class="d-line" stroke-width="2"/>
+ <rect x="252" y="160" width="20" height="30" class="d-nerve" stroke-width="1.5"/>
+ <g class="d-line" stroke-width="1.6"><line x1="272" y1="158" x2="272" y2="192"/><line x1="276" y1="158" x2="276" y2="192"/><line x1="272" y1="164" x2="276" y2="168"/><line x1="272" y1="174" x2="276" y2="178"/><line x1="272" y1="184" x2="276" y2="188"/></g>
+ <path d="M 276 156 L 300 150 C 360 146 380 140 420 146 C 460 152 480 150 520 150 L 700 150 L 700 200 L 520 200 C 480 200 460 204 420 206 C 380 208 360 204 300 200 L 276 194 Z" class="d-myelin" stroke-width="1.8"/>
+ <path d="M 283 150 C 360 138 470 140 700 142 M 283 200 C 360 212 470 210 700 208" class="d-line" stroke-width="1.2" stroke-dasharray="5 4"/>
+ <rect x="520" y="104" width="70" height="36" class="d-bone" stroke-width="1.5"/>
+ <rect x="520" y="212" width="70" height="36" class="d-bone" stroke-width="1.5"/>
+ <path d="M 700 140 L 745 128 L 760 175 L 745 222 L 700 210 Z" class="d-nerve" stroke-width="1.8"/>
+ <path d="M 344 250 L 344 200 C 344 186 330 176 300 176 L 262 176 L 256 176" class="d-art" stroke-width="4"/>
+ <path d="M 256 176 C 250 140 235 110 205 86 M 256 176 C 250 210 235 240 205 264" class="d-art" stroke-width="2.4"/>
+ <text x="72" y="304" class="d-text" text-anchor="middle">眼球</text>
+ <text x="555" y="96" class="d-text" text-anchor="middle">骨</text>
+`;
+const S2 = `
+ <rect width="800" height="430" fill="var(--fig-bg)"/>
+ <text x="40" y="34" class="d-text">光線 ↓（玻璃體側）</text>
+ <g stroke="var(--fig-artery)" stroke-width="2.5" opacity=".6"><line x1="200" y1="14" x2="200" y2="52"/><line x1="360" y1="14" x2="360" y2="52"/><line x1="520" y1="14" x2="520" y2="52"/></g>
+ <line x1="40" y1="74" x2="690" y2="74" class="d-line" stroke-width="1" stroke-dasharray="4 4"/>
+ <text x="40" y="66" class="d-text" style="font-size:13px">← 軸突匯集往視盤</text>
+ ${[110,250,390,530,650].map((x,i)=>`<path d="M ${x} 112 L ${x} 84 Q ${x} 76 ${x-20} 76 L 40 76" class="d-line" stroke-width="2"/>
+   <path d="M ${x} 128 L ${x-26} 196 M ${x} 128 L ${x+26} 196" class="d-line" stroke-width="2"/>
+   <circle cx="${x}" cy="118" r="17" class="d-tissue2" stroke-width="2"/><circle cx="${x}" cy="118" r="5" fill="var(--fig-stroke)"/>`).join("")}
+ ${[84,136,224,276,364,416,504,556,624,676].map(x=>`<path d="M ${x} 222 L ${x} 272" class="d-line" stroke-width="2"/>
+   <ellipse cx="${x}" cy="210" rx="9" ry="15" class="d-tissue" stroke-width="2"/><circle cx="${x}" cy="210" r="3" fill="var(--fig-stroke)"/>`).join("")}
+ ${Array.from({length:20},(_,i)=>{const x=60+i*32; const cone=i%3===1;
+   return cone?`<path d="M ${x} 280 L ${x} 300 M ${x-9} 350 L ${x-5} 312 Q ${x} 300 ${x+5} 312 L ${x+9} 350 Z" class="d-tissue2" stroke-width="1.6"/><path d="M ${x-7} 350 L ${x+7} 350 L ${x} 372 Z" fill="var(--fig-stroke)"/>`
+   :`<path d="M ${x} 280 L ${x} 300" class="d-line" stroke-width="1.6"/><rect x="${x-5}" y="300" width="10" height="76" rx="5" class="d-nerve" stroke-width="1.6"/>`}).join("")}
+ <rect x="30" y="382" width="680" height="24" fill="var(--fig-stroke)" opacity=".75"/>
+ <text x="40" y="424" class="d-text" style="font-size:13px">色素上皮 RPE</text>
+`;
+const S3 = `
+ <rect width="800" height="450" fill="var(--fig-bg)"/>
+ <path d="M 90 235 C 78 140 170 58 320 48 C 470 38 620 58 705 128 C 765 180 772 262 732 302 C 700 334 650 332 604 342 C 560 384 480 402 402 394 C 330 388 282 364 252 334 C 198 334 118 314 90 235 Z" class="d-tissue" stroke-width="2.2"/>
+ <path d="M 244 292 C 330 270 420 256 530 236" class="d-line" stroke-width="3"/>
+ <path d="M 424 52 C 414 110 404 160 386 250" class="d-line" stroke-width="3"/>
+ <path d="M 640 76 C 646 100 650 120 648 140" class="d-line" stroke-width="2" opacity=".6"/>
+ <path d="M 312 336 C 330 318 400 312 470 322 C 488 326 488 340 470 342 C 420 338 350 344 318 350 Z" class="d-vent" stroke-width="1.5"/>
+ <path d="M 732 238 C 752 250 756 290 736 304 C 712 300 700 280 704 256 Z" class="d-cortex"/>
+ <path d="M 272 306 C 340 300 410 296 462 292" class="d-line" stroke-width="5" stroke-dasharray="10 5" opacity=".75"/>
+ <g fill="none" stroke-linecap="round">
+  <path d="M 476 286 C 520 226 620 214 724 252" stroke="var(--pin)" stroke-width="7" opacity=".45"/>
+  <path d="M 478 292 C 560 290 650 284 728 272" stroke="var(--fig-stroke)" stroke-width="7" opacity=".45"/>
+  <path d="M 472 300 C 420 314 318 344 316 362 C 316 380 430 364 540 340 C 620 322 684 304 728 290" stroke="var(--fig-artery)" stroke-width="7" opacity=".45"/>
+ </g>
+ <ellipse cx="470" cy="292" rx="15" ry="10" class="d-tissue2" stroke-width="2"/>
+ <text x="96" y="236" class="d-text">前 ←</text><text x="690" y="200" class="d-text">→ 後</text>
+ <text x="340" y="326" class="d-text" style="font-size:12px">側腦室下角</text>
+`;
+
+const FIGS = [
+ {id:"s-nerve", title:"視神經分段示意（水平切面，左＝眼球，右＝顱內）", src:"自繪示意圖", w:800, h:390, svg:S1, marks:[
+   {t:"pre",  x:262,y:175, lx:250,ly:40},
+   {t:"retro",x:290,y:175, lx:330,ly:40},
+   {t:"io",   br:[300,520,262], lx:410,ly:292},
+   {t:"ic",   br:[520,590,262], lx:555,ly:292},
+   {t:"icr",  br:[590,700,262], lx:645,ly:292},
+   {t:"on",   br:[252,700,318], lx:476,ly:350},
+   {t:"cra",  x:344,y:236, lx:190,ly:340},
+ ]},
+ {id:"s-retina", title:"視網膜細胞層示意（上＝玻璃體，下＝色素上皮）", src:"自繪示意圖", w:800, h:430, svg:S2, marks:[
+   {t:"gc", x:650,y:118, lx:755,ly:118},
+   {t:"bp", x:676,y:210, lx:755,ly:210},
+   {t:"pr", x:668,y:330, lx:755,ly:330},
+ ]},
+ {id:"s-radiation", title:"視放射側面示意（左大腦半球外側面）", src:"自繪示意圖", w:800, h:450, svg:S3, marks:[
+   {t:"meyer",x:318,y:362, lx:230,ly:420},
+   {t:"baum", x:600,y:226, lx:620,ly:150},
+   {t:"or",   x:612,y:286, lx:520,ly:176},
+   {t:"lgn",  x:470,y:292, lx:470,ly:430},
+   {t:"ot",   x:330,y:303, lx:150,ly:360},
+   {t:"cs",   x:410,y:130, lx:330,ly:110},
+   {t:"vc",   x:736,y:272, lx:770,ly:380},
+ ]},
+ {id:"p-spec60", title:"腦底面解剖標本（上＝前方）", src:"講義照片 #60", w:1251, h:1424, img:"spec60", marks:[
+   {t:"on",   x:615,y:385, lx:760,ly:250},
+   {t:"ch",   x:565,y:495, lx:420,ly:430},
+   {t:"ot",   x:640,y:572, lx:790,ly:560},
+   {t:"lgn",  x:825,y:822, lx:960,ly:760},
+   {t:"meyer",x:245,y:590, lx:110,ly:520},
+   {t:"or",   x:285,y:688, lx:120,ly:800},
+   {t:"vc",   x:950,y:1300,lx:1120,ly:1360},
+ ]},
+ {id:"p-sagbot", title:"頭部正中矢狀切面（右＝前方）", src:"講義照片", w:1284, h:1098, img:"sag_bot", marks:[
+   {t:"ch", x:505,y:630, lx:560,ly:520},
+ ]},
+ {id:"p-sagtop", title:"大腦內側面（左＝後方，枕葉）", src:"講義照片", w:1056, h:743, img:"sag_top", marks:[
+   {t:"po",  x:178,y:207, lx:70,ly:150},
+   {t:"cal", x:180,y:398, lx:70,ly:470},
+ ]},
+ {id:"p-top", title:"大腦上面觀（上＝前方）", src:"網路圖片", w:931, h:1015, img:"topview", marks:[
+   {t:"cs", x:330,y:704, lx:230,ly:830},
+ ]},
+ {id:"p-lateral", title:"大腦外側面（左＝後方）", src:"Wikipedia 圖（原標籤已遮）", w:1284, h:759, img:"lateral", marks:[
+   {t:"cs", x:640,y:250, lx:720,ly:120},
+   {t:"po", x:318,y:236, lx:200,ly:120},
+   {t:"vc", x:240,y:470, lx:110,ly:640},
+ ]},
+];
+
+/* ---------- storage ---------- */
+const KEY="eye-visual-pathway-v1";
+let store={stats:{},groups:GROUPS.map(g=>g[0])};
+try{const s=JSON.parse(localStorage.getItem(KEY)||"null"); if(s&&s.stats) store=Object.assign(store,s);}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(store))}catch(e){}}
+const st=id=>store.stats[id]||(store.stats[id]={n:0,ok:0,streak:0,lastBad:false});
+
+/* ---------- answer checking ---------- */
+const S2T={"视":"視","觉":"覺","经":"經","节":"節","极":"極","细":"細","区":"區","后":"後","内":"內","颅":"顱","动":"動","脉":"脈","径":"徑","侧":"側","状":"狀","体":"體","质":"質","沟":"溝","环":"環","鲍":"鮑","网":"網","膜":"膜","叉":"叉","筛":"篩","板":"板","层":"層","丘":"丘","脑":"腦","辐":"輻","枕":"枕","顶":"頂","中":"中","央":"央","眶":"眶","管":"管","感":"感","光":"光","胞":"胞"};
+const nzh=s=>[...s.replace(/[\s·．.、,，()（）]/g,"")].map(c=>S2T[c]||c).join("");
+const nen=s=>s.toLowerCase().replace(/[’'`´]/g,"").replace(/[-_/.,()]/g," ").replace(/\bthe\b|\bof\b/g," ").replace(/\s+/g," ").trim().split(" ").map(w=>w.length>3?w.replace(/s$/,""):w).join(" ");
+const okZh=(t,v)=>v.trim()!==""&&[t.zh,...t.zhA].some(a=>nzh(a)===nzh(v));
+const okEn=(t,v)=>v.trim()!==""&&[t.en,...t.enA].some(a=>nen(a)===nen(v));
+
+/* ---------- svg rendering ---------- */
+function pinSVG(f,m,mode,num){
+  const k=f.w/800, r=17*k, fs=19*k, sw=2.5*k;
+  let tx=m.x,ty=m.y,extra="";
+  if(m.br){const[x1,x2,y]=m.br; tx=(x1+x2)/2; ty=y+10*k;
+    extra=`<path d="M ${x1} ${y-8*k} L ${x1} ${y} L ${x2} ${y} L ${x2} ${y-8*k}" class="pin-line" stroke-width="${sw}"/>`;}
+  const t=T[m.t];
+  let badge;
+  if(mode==="label"){const txt=`${t.zh} ${t.en}`, lfs=22*k, lr=19*k;
+    const w=[...txt].reduce((a,c)=>a+(/[\u3000-\u9fff\uff00-\uffef]/.test(c)?1:0.62),0)*lfs+24*k;
+    const bx=Math.min(Math.max(m.lx,w/2+4),f.w-w/2-4);
+    const by=Math.min(Math.max(m.ly,lr+4),f.h-lr-4);
+    badge=`<rect x="${bx-w/2}" y="${by-lr}" width="${w}" height="${2*lr}" rx="${lr}" class="pin-badge" stroke-width="${1.5*k}"/><text x="${bx}" y="${by}" class="pin-text" font-size="${lfs}" style="font-family:var(--body)">${txt}</text>`;}
+  else badge=`<circle cx="${m.lx}" cy="${m.ly}" r="${r}" class="pin-badge" stroke-width="${1.5*k}"/><text x="${m.lx}" y="${m.ly}" class="pin-text" font-size="${fs}">${num}</text>`;
+  return `<g>${extra}<line x1="${tx}" y1="${ty}" x2="${m.lx}" y2="${m.ly}" class="pin-line" stroke-width="${sw}" stroke-linecap="round"/>
+   ${m.br?"":`<circle cx="${m.x}" cy="${m.y}" r="${12*k}" class="pin-ring" stroke-width="${3*k}"/><circle cx="${m.x}" cy="${m.y}" r="${5*k}" class="pin-dot" stroke-width="${1.5*k}"/>`}
+   ${badge}</g>`;
+}
+function figSVG(f,pins){
+  const base=f.img?`<image href="${IMG[f.img]}" x="0" y="0" width="${f.w}" height="${f.h}" preserveAspectRatio="none"/>`:f.svg;
+  return `<svg viewBox="0 0 ${f.w} ${f.h}" role="img" aria-label="${f.title}">${base}${pins}</svg>
+   <figcaption><span>${f.title}</span><em>${f.src}</em></figcaption>`;
+}
+
+/* ---------- quiz ---------- */
+const $=id=>document.getElementById(id);
+let cur=null, answered=false, session=0, hintLevel=0, lastId=null;
+
+function pool(){const gs=new Set(store.groups); return TERMS.filter(t=>gs.has(t.g));}
+function weight(t){const s=st(t.id);
+  if(s.n===0) return 12;
+  const wrongRate=(s.n-s.ok)/s.n;
+  return (1+6*wrongRate+(s.lastBad?4:0))/(1+s.streak);
+}
+function pick(){
+  let p=pool(); if(!p.length) return null;
+  if(p.length>1) p=p.filter(t=>t.id!==lastId);
+  const ws=p.map(weight), sum=ws.reduce((a,b)=>a+b,0);
+  let r=Math.random()*sum, i=0; while(r>ws[i]&&i<ws.length-1){r-=ws[i];i++}
+  const term=p[i];
+  const opts=[]; FIGS.forEach(f=>f.marks.forEach(m=>{if(m.t===term.id) opts.push({f,m})}));
+  return {term,...opts[Math.floor(Math.random()*opts.length)]};
+}
+function renderQ(){
+  cur=pick(); answered=false; hintLevel=0;
+  if(!cur){$("qfig").innerHTML=`<p style="padding:20px">請至少選一個範圍。</p>`;return;}
+  lastId=cur.term.id;
+  $("qfig").innerHTML=figSVG(cur.f,pinSVG(cur.f,cur.m,"num","?"));
+  const s=st(cur.term.id);
+  $("qtag").textContent=s.n===0?"新題":(s.lastBad?"上次答錯":`答對 ${s.ok}/${s.n}`);
+  $("qtag").className="tag"+(s.n===0?" new":"");
+  for(const k of ["zh","en"]){$("in-"+k).value="";$("f-"+k).className="field";$("a-"+k).textContent="";$("in-"+k).readOnly=false}
+  $("hint").textContent=""; $("b-submit").textContent="送出"; $("b-skip").hidden=false; $("b-hint").hidden=false;
+  if(!matchMedia("(hover:none)").matches) $("in-zh").focus();
+}
+function finish(give){
+  const t=cur.term, zv=$("in-zh").value, ev=$("in-en").value;
+  const zo=!give&&okZh(t,zv), eo=!give&&okEn(t,ev);
+  $("f-zh").className="field "+(zo?"ok":"bad"); $("f-en").className="field "+(eo?"ok":"bad");
+  $("a-zh").textContent=(zo?"✓ ":"✗ 答案：")+t.zh; $("a-en").textContent=(eo?"✓ ":"✗ 答案：")+t.en;
+  const s=st(t.id); s.n++; const both=zo&&eo;
+  if(both){s.ok++;s.streak++;s.lastBad=false}else{s.streak=0;s.lastBad=true}
+  save(); session++; answered=true;
+  $("in-zh").readOnly=$("in-en").readOnly=true;
+  $("hint").innerHTML=`<span class="verdict ${both?"ok":(zo||eo)?"part":"bad"}">${both?"中英都對":(zo||eo)?"答對一半":"答錯"}</span>　${t.zh}　${t.en}`;
+  $("qfig").innerHTML=figSVG(cur.f,pinSVG(cur.f,cur.m,"label"));
+  $("b-submit").textContent="下一題 →"; $("b-skip").hidden=true; $("b-hint").hidden=true;
+  $("b-submit").focus(); updateStats();
+}
+$("qform").addEventListener("submit",e=>{e.preventDefault(); if(!cur) return; if(answered) renderQ(); else finish(false)});
+$("in-zh").addEventListener("keydown",e=>{if(e.key==="Enter"&&!answered){e.preventDefault();$("in-en").focus()}});
+$("b-skip").onclick=()=>{if(!answered) finish(true)};
+$("b-hint").onclick=()=>{if(answered||!cur) return; hintLevel++; const t=cur.term;
+  $("hint").textContent= hintLevel===1?`中文 ${t.zh.length} 個字，英文開頭「${t.en[0]}」`
+    : `中文第一字「${t.zh[0]}」，英文：${t.en.replace(/[a-z]/gi,(c,i)=>i<3?c:"_")}`;};
+
+function updateStats(){
+  const seen=TERMS.filter(t=>st(t.id).n>0).length;
+  const n=TERMS.reduce((a,t)=>a+st(t.id).n,0), ok=TERMS.reduce((a,t)=>a+st(t.id).ok,0);
+  $("st-seen").textContent=`${seen}/${TERMS.length}`; $("st-new").textContent=TERMS.length-seen;
+  $("st-acc").textContent=n?Math.round(ok/n*100)+"%":"–"; $("st-session").textContent=session;
+  $("progress").innerHTML=TERMS.map(t=>{const s=st(t.id);
+    const c=s.n===0?"":(s.lastBad?"s-bad":"s-ok");
+    return `<span class="dot ${c}" title="${t.en}">${t.zh}${s.n?` ${s.ok}/${s.n}`:""}</span>`}).join("");
+}
+function renderFilters(){
+  $("filters").innerHTML=GROUPS.map(([g,n])=>`<button type="button" class="chip" data-g="${g}" aria-pressed="${store.groups.includes(g)}">${n}（${TERMS.filter(t=>t.g===g).length}）</button>`).join("");
+  $("filters").querySelectorAll(".chip").forEach(b=>b.onclick=()=>{
+    const g=b.dataset.g; store.groups=store.groups.includes(g)?store.groups.filter(x=>x!==g):[...store.groups,g];
+    save(); renderFilters(); if(!cur||!store.groups.includes(cur.term.g)||answered) renderQ();});
+}
+function askReset(){$("reset-box").innerHTML=`確定清除？<button class="linkbtn" id="r-yes" type="button">清除</button><button class="linkbtn" id="r-no" type="button">取消</button>`;
+  $("r-yes").onclick=()=>{store.stats={};save();session=0;restoreReset();updateStats();renderQ()};
+  $("r-no").onclick=restoreReset;}
+function restoreReset(){$("reset-box").innerHTML=`<button class="linkbtn" id="b-reset" type="button">清除作答紀錄</button>`;$("b-reset").onclick=askReset;}
+$("b-reset").onclick=askReset;
+
+/* ---------- atlas ---------- */
+function renderAtlas(){
+  $("atlas").innerHTML=FIGS.map(f=>`<figure class="fig" style="margin:0">${figSVG(f,f.marks.map((m,i)=>pinSVG(f,m,"num",i+1)).join(""))}
+    <ol class="legend">${f.marks.map((m,i)=>`<li><span class="n">${i+1}</span><span class="t">${T[m.t].zh}　${T[m.t].en}</span></li>`).join("")}</ol></figure>`).join("");
+  $("atlas").querySelectorAll(".legend li").forEach(li=>li.onclick=()=>li.classList.toggle("show"));
+}
+let blurred=false;
+$("b-blur").onclick=()=>{blurred=!blurred; $("atlas").querySelectorAll(".legend").forEach(l=>{l.classList.toggle("hide",blurred);l.querySelectorAll("li").forEach(li=>li.classList.remove("show"))}); $("b-blur").textContent=blurred?"顯示答案":"遮住答案"};
+
+/* ---------- tabs ---------- */
+function tab(which){
+  $("tab-quiz").setAttribute("aria-selected",which==="quiz"); $("tab-atlas").setAttribute("aria-selected",which==="atlas");
+  $("view-quiz").hidden=which!=="quiz"; $("view-atlas").hidden=which!=="atlas";
+}
+$("tab-quiz").onclick=()=>tab("quiz"); $("tab-atlas").onclick=()=>tab("atlas");
+if(location.hash==="#atlas") tab("atlas");
+
+renderFilters(); renderAtlas(); updateStats(); renderQ();
+</script>
