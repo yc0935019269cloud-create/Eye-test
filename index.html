@@ -120,8 +120,8 @@ h1 small{display:block;font-family:var(--mono);font-size:.72rem;font-weight:500;
 
   <section id="view-quiz" class="wrap" style="padding:0">
     <div class="stats">
-      <div class="stat"><b id="st-seen">0/20</b><span>寫過的題目</span></div>
-      <div class="stat"><b id="st-new">20</b><span>還沒寫過</span></div>
+      <div class="stat"><b id="st-seen">0</b><span>寫過的題目</span></div>
+      <div class="stat"><b id="st-new">0</b><span>還沒寫過</span></div>
       <div class="stat"><b id="st-acc">–</b><span>中英全對率</span></div>
       <div class="stat"><b id="st-session">0</b><span>本次作答</span></div>
     </div>
@@ -143,7 +143,7 @@ h1 small{display:block;font-family:var(--mono);font-size:.72rem;font-weight:500;
       </div>
     </form>
 
-    <div class="row"><span class="section-title">範圍內 20 個名詞</span>
+    <div class="row"><span class="section-title" id="scope-title">範圍內名詞</span>
       <span class="confirm" id="reset-box"><button class="linkbtn" id="b-reset" type="button">清除作答紀錄</button></span></div>
     <div class="progress" id="progress"></div>
     <p class="small">出題方式：還沒寫過的名詞權重最高；答錯越多、最近答錯的，出現機率也越高；連續答對的會慢慢變少。紀錄只存在這台裝置的瀏覽器。</p>
@@ -178,6 +178,7 @@ const TERMS = [
  {id:"bp",   g:"retina",zh:"雙極細胞", en:"bipolar cell", zhA:[], enA:["bipolar"]},
  {id:"gc",   g:"retina",zh:"神經節細胞", en:"ganglion cell", zhA:["視網膜神經節細胞","節細胞"], enA:["retinal ganglion cell","rgc"]},
  {id:"ch",   g:"path",  zh:"視交叉", en:"optic chiasm", zhA:[], enA:["optic chiasma","chiasm","chiasma"]},
+ {id:"pit",  g:"path",  zh:"腦下垂體", en:"pituitary gland", zhA:["腦垂體","腦下腺","垂體","腦下垂腺"], enA:["pituitary","hypophysis","hypophysis cerebri"]},
  {id:"ot",   g:"path",  zh:"視徑", en:"optic tract", zhA:["視束"], enA:[]},
  {id:"lgn",  g:"path",  zh:"外側膝狀體核", en:"lateral geniculate nuclei of the thalamus", zhA:["外側膝狀體","外側膝狀核","外側膝狀體核","丘腦外側膝狀體","視丘外側膝狀體核"], enA:["lateral geniculate nucleus","lateral geniculate nuclei","lateral geniculate body","lgn","lgb","lateral geniculate nucleus of the thalamus","lateral geniculate"]},
  {id:"or",   g:"path",  zh:"視放射", en:"optic radiation", zhA:["視輻射"], enA:["geniculocalcarine tract","geniculostriate pathway"]},
@@ -283,10 +284,12 @@ const FIGS = [
  ]},
  {id:"p-sagbot", title:"頭部正中矢狀切面（右＝前方）", src:"講義照片", w:1284, h:1098, img:"sag_bot", marks:[
    {t:"ch", x:505,y:630, lx:560,ly:520},
+   {t:"pit",x:548,y:705, lx:700,ly:800},
  ]},
  {id:"p-sagtop", title:"大腦內側面（左＝後方，枕葉）", src:"講義照片", w:1056, h:743, img:"sag_top", marks:[
    {t:"po",  x:178,y:207, lx:70,ly:150},
    {t:"cal", x:180,y:398, lx:70,ly:470},
+   {t:"pit", x:655,y:352, lx:760,ly:250},
  ]},
  {id:"p-top", title:"大腦上面觀（上＝前方）", src:"網路圖片", w:931, h:1015, img:"topview", marks:[
    {t:"cs", x:330,y:704, lx:230,ly:830},
@@ -390,6 +393,7 @@ $("b-hint").onclick=()=>{if(answered||!cur) return; hintLevel++; const t=cur.ter
     : `中文第一字「${t.zh[0]}」，英文：${t.en.replace(/[a-z]/gi,(c,i)=>i<3?c:"_")}`;};
 
 function updateStats(){
+  $("scope-title").textContent=`範圍內 ${TERMS.length} 個名詞`;
   const seen=TERMS.filter(t=>st(t.id).n>0).length;
   const n=TERMS.reduce((a,t)=>a+st(t.id).n,0), ok=TERMS.reduce((a,t)=>a+st(t.id).ok,0);
   $("st-seen").textContent=`${seen}/${TERMS.length}`; $("st-new").textContent=TERMS.length-seen;
