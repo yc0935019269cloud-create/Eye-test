@@ -43,6 +43,10 @@ h1 small{display:block;font-family:var(--mono);font-size:.72rem;font-weight:500;
 .stat b{display:block;font-family:var(--mono);font-size:1.15rem;font-variant-numeric:tabular-nums}
 .stat span{font-size:.75rem;color:var(--muted)}
 .filters{display:flex;flex-wrap:wrap;gap:6px}
+.settings{gap:10px}
+.set-row{display:grid;grid-template-columns:4.5em 1fr;gap:8px;align-items:start}
+.set-label{font-size:.8rem;color:var(--muted);padding-top:5px;letter-spacing:.05em}
+.empty{padding:28px 18px;display:flex;flex-direction:column;gap:10px;align-items:flex-start}
 .chip{border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:999px;padding:4px 11px;font:inherit;font-size:.85rem;cursor:pointer}
 .chip[aria-pressed="true"]{border-color:var(--pin);background:var(--pin-soft);color:var(--ink)}
 .fig{background:var(--fig-bg);border:1px solid var(--line);border-radius:12px;overflow:hidden}
@@ -125,7 +129,12 @@ h1 small{display:block;font-family:var(--mono);font-size:.72rem;font-weight:500;
       <div class="stat"><b id="st-acc">–</b><span>中英全對率</span></div>
       <div class="stat"><b id="st-session">0</b><span>本次作答</span></div>
     </div>
-    <div class="filters" id="filters"></div>
+    <div class="card settings">
+      <div class="set-row"><span class="set-label">出題方式</span><div class="filters" id="modes"></div></div>
+      <div class="set-row"><span class="set-label">範圍</span><div class="filters" id="filters"></div></div>
+      <div class="set-row"><span class="set-label">圖片</span><div class="filters" id="sources"></div></div>
+      <div class="small" id="pool-info"></div>
+    </div>
 
     <figure class="fig q" id="qfig" style="margin:0"></figure>
 
@@ -146,7 +155,7 @@ h1 small{display:block;font-family:var(--mono);font-size:.72rem;font-weight:500;
     <div class="row"><span class="section-title" id="scope-title">範圍內名詞</span>
       <span class="confirm" id="reset-box"><button class="linkbtn" id="b-reset" type="button">清除作答紀錄</button></span></div>
     <div class="progress" id="progress"></div>
-    <p class="small">出題方式：還沒寫過的名詞權重最高；答錯越多、最近答錯的，出現機率也越高；連續答對的會慢慢變少。紀錄只存在這台裝置的瀏覽器。</p>
+    <p class="small">智慧出題：還沒寫過的最常出，其次是答錯多、最近答錯的，連續答對的會變少。優先錯題：錯題出現機率最高，其他偶爾出。只考錯題：最近答錯、或答錯後還沒連對兩次的名詞。紀錄只存在這台裝置的瀏覽器。</p>
   </section>
 
   <section id="view-atlas" hidden>
@@ -303,7 +312,9 @@ const FIGS = [
 
 /* ---------- storage ---------- */
 const KEY="eye-visual-pathway-v1";
-let store={stats:{},groups:GROUPS.map(g=>g[0])};
+const MODES=[["smart","智慧（未寫過優先）"],["random","完全隨機"],["wrongfirst","優先錯題"],["wrongonly","只考錯題"],["newonly","只考沒寫過"]];
+const SOURCES=[["all","全部"],["photo","只考照片"],["diagram","只考示意圖"]];
+let store={stats:{},groups:GROUPS.map(g=>g[0]),mode:"smart",source:"all"};
 try{const s=JSON.parse(localStorage.getItem(KEY)||"null"); if(s&&s.stats) store=Object.assign(store,s);}catch(e){}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(store))}catch(e){}}
 const st=id=>store.stats[id]||(store.stats[id]={n:0,ok:0,streak:0,lastBad:false});
@@ -343,8 +354,18 @@ function figSVG(f,pins){
 const $=id=>document.getElementById(id);
 let cur=null, answered=false, session=0, hintLevel=0, lastId=null;
 
-function pool(){const gs=new Set(store.groups); return TERMS.filter(t=>gs.has(t.g));}
+const figOk=f=>store.source==="all"||(store.source==="photo")===!!f.img;
+const placements=id=>{const o=[];FIGS.forEach(f=>{if(figOk(f))f.marks.forEach(m=>{if(m.t===id)o.push({f,m})})});return o};
+const isWrong=s=>s.lastBad||(s.n>s.ok&&s.streak<2);
+function pool(){const gs=new Set(store.groups);
+  return TERMS.filter(t=>gs.has(t.g)&&placements(t.id).length&&
+    (store.mode==="wrongonly"?isWrong(st(t.id)):store.mode==="newonly"?st(t.id).n===0:true));}
 function weight(t){const s=st(t.id);
+  switch(store.mode){
+    case "random": case "newonly": return 1;
+    case "wrongonly": return 1+(s.n-s.ok)+(s.lastBad?3:0);
+    case "wrongfirst": return s.lastBad?12:isWrong(s)?6:s.n===0?2:1;
+  }
   if(s.n===0) return 12;
   const wrongRate=(s.n-s.ok)/s.n;
   return (1+6*wrongRate+(s.lastBad?4:0))/(1+s.streak);
@@ -355,12 +376,16 @@ function pick(){
   const ws=p.map(weight), sum=ws.reduce((a,b)=>a+b,0);
   let r=Math.random()*sum, i=0; while(r>ws[i]&&i<ws.length-1){r-=ws[i];i++}
   const term=p[i];
-  const opts=[]; FIGS.forEach(f=>f.marks.forEach(m=>{if(m.t===term.id) opts.push({f,m})}));
+  const opts=placements(term.id);
   return {term,...opts[Math.floor(Math.random()*opts.length)]};
 }
 function renderQ(){
   cur=pick(); answered=false; hintLevel=0;
-  if(!cur){$("qfig").innerHTML=`<p style="padding:20px">請至少選一個範圍。</p>`;return;}
+  $("qform").hidden=!cur;
+  if(!cur){const msg=!store.groups.length?"請至少選一個範圍。":store.mode==="wrongonly"?"目前範圍內沒有錯題。":store.mode==="newonly"?"目前範圍內的題目都寫過了。":"這個範圍在選的圖片類型裡沒有題目。";
+    $("qfig").innerHTML=`<div class="empty"><b>${msg}</b><button class="btn" type="button" id="b-back">改回智慧出題、全部範圍</button></div>`;
+    $("b-back").onclick=()=>{store.mode="smart";store.source="all";store.groups=GROUPS.map(g=>g[0]);save();renderFilters();renderQ()};
+    return;}
   lastId=cur.term.id;
   $("qfig").innerHTML=figSVG(cur.f,pinSVG(cur.f,cur.m,"num","?"));
   const s=st(cur.term.id);
@@ -383,7 +408,7 @@ function finish(give){
   $("hint").innerHTML=`<span class="verdict ${both?"ok":(zo||eo)?"part":"bad"}">${both?"中英都對":(zo||eo)?"答對一半":"答錯"}</span>　${t.zh}　${t.en}`;
   $("qfig").innerHTML=figSVG(cur.f,pinSVG(cur.f,cur.m,"label"));
   $("b-submit").textContent="下一題 →"; $("b-skip").hidden=true; $("b-hint").hidden=true;
-  $("b-submit").focus(); updateStats();
+  $("b-submit").focus(); updateStats(); renderFilters();
 }
 $("qform").addEventListener("submit",e=>{e.preventDefault(); if(!cur) return; if(answered) renderQ(); else finish(false)});
 $("in-zh").addEventListener("keydown",e=>{if(e.key==="Enter"&&!answered){e.preventDefault();$("in-en").focus()}});
@@ -402,11 +427,23 @@ function updateStats(){
     const c=s.n===0?"":(s.lastBad?"s-bad":"s-ok");
     return `<span class="dot ${c}" title="${t.en}">${t.zh}${s.n?` ${s.ok}/${s.n}`:""}</span>`}).join("");
 }
+function chips(el,list,isOn,onPick){
+  $(el).innerHTML=list.map(([v,n])=>`<button type="button" class="chip" data-v="${v}" aria-pressed="${isOn(v)}">${n}</button>`).join("");
+  $(el).querySelectorAll(".chip").forEach(b=>b.onclick=()=>{onPick(b.dataset.v);save();renderFilters();renderQ()});
+}
 function renderFilters(){
-  $("filters").innerHTML=GROUPS.map(([g,n])=>`<button type="button" class="chip" data-g="${g}" aria-pressed="${store.groups.includes(g)}">${n}（${TERMS.filter(t=>t.g===g).length}）</button>`).join("");
+  chips("modes",MODES,v=>store.mode===v,v=>store.mode=v);
+  chips("sources",SOURCES,v=>store.source===v,v=>store.source=v);
+  const all=store.groups.length===GROUPS.length;
+  $("filters").innerHTML=`<button type="button" class="chip" data-g="*" aria-pressed="${all}">全部</button>`+GROUPS.map(([g,n])=>`<button type="button" class="chip" data-g="${g}" aria-pressed="${store.groups.includes(g)}">${n}（${TERMS.filter(t=>t.g===g).length}）</button>`).join("");
   $("filters").querySelectorAll(".chip").forEach(b=>b.onclick=()=>{
-    const g=b.dataset.g; store.groups=store.groups.includes(g)?store.groups.filter(x=>x!==g):[...store.groups,g];
-    save(); renderFilters(); if(!cur||!store.groups.includes(cur.term.g)||answered) renderQ();});
+    const g=b.dataset.g;
+    if(g==="*") store.groups=all?[]:GROUPS.map(x=>x[0]);
+    else if(all) store.groups=[g];  // 從「全部」點某一類＝只考這一類
+    else store.groups=store.groups.includes(g)?store.groups.filter(x=>x!==g):[...store.groups,g];
+    save(); renderFilters(); renderQ();});
+  const n=pool().length;
+  $("pool-info").textContent=`符合條件：${n} 個名詞`+(store.mode==="wrongonly"||store.mode==="newonly"?"（會隨作答變動）":"");
 }
 function askReset(){$("reset-box").innerHTML=`確定清除？<button class="linkbtn" id="r-yes" type="button">清除</button><button class="linkbtn" id="r-no" type="button">取消</button>`;
   $("r-yes").onclick=()=>{store.stats={};save();session=0;restoreReset();updateStats();renderQ()};
