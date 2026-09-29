@@ -269,8 +269,9 @@ const FIGS = [
    {t:"ch",   x:565,y:495, lx:420,ly:430},
    {t:"ot",   x:640,y:572, lx:790,ly:560},
    {t:"lgn",  x:825,y:822, lx:960,ly:760},
-   {t:"meyer",x:245,y:590, lx:110,ly:520},
-   {t:"or",   x:285,y:688, lx:120,ly:800},
+   {t:"meyer",x:240,y:580, lx:110,ly:470},
+   {t:"or",   x:262,y:622, lx:90, ly:660},
+   {t:"baum", x:290,y:686, lx:150,ly:850},
    {t:"vc",   x:950,y:1300,lx:1120,ly:1360},
  ]},
  {id:"p-sagbot", title:"頭部正中矢狀切面（右＝前方）", src:"講義照片", w:1284, h:1098, img:"sag_bot", marks:[
@@ -300,7 +301,7 @@ const st=id=>store.stats[id]||(store.stats[id]={n:0,ok:0,streak:0,lastBad:false}
 /* ---------- answer checking ---------- */
 const S2T={"视":"視","觉":"覺","经":"經","节":"節","极":"極","细":"細","区":"區","后":"後","内":"內","颅":"顱","动":"動","脉":"脈","径":"徑","侧":"側","状":"狀","体":"體","质":"質","沟":"溝","环":"環","鲍":"鮑","网":"網","膜":"膜","叉":"叉","筛":"篩","板":"板","层":"層","丘":"丘","脑":"腦","辐":"輻","枕":"枕","顶":"頂","中":"中","央":"央","眶":"眶","管":"管","感":"感","光":"光","胞":"胞"};
 const nzh=s=>[...s.replace(/[\s·．.、,，()（）]/g,"")].map(c=>S2T[c]||c).join("");
-const nen=s=>s.toLowerCase().replace(/[’'`´]/g,"").replace(/[-_/.,()]/g," ").replace(/\bthe\b|\bof\b/g," ").replace(/\s+/g," ").trim().split(" ").map(w=>w.length>3?w.replace(/s$/,""):w).join(" ");
+const nen=s=>s.toLowerCase().replace(/[’'`´]\s*/g,"").replace(/[-_/.,()]/g," ").replace(/\bthe\b|\bof\b/g," ").replace(/\s+/g," ").trim().split(" ").map(w=>w.length>3?w.replace(/s$/,""):w).join(" ");
 const okZh=(t,v)=>v.trim()!==""&&[t.zh,...t.zhA].some(a=>nzh(a)===nzh(v));
 const okEn=(t,v)=>v.trim()!==""&&[t.en,...t.enA].some(a=>nen(a)===nen(v));
 
@@ -361,7 +362,8 @@ function renderQ(){
 }
 function finish(give){
   const t=cur.term, zv=$("in-zh").value, ev=$("in-en").value;
-  const zo=!give&&okZh(t,zv), eo=!give&&okEn(t,ev);
+  let zo=!give&&okZh(t,zv), eo=!give&&okEn(t,ev);
+  if(!give&&!zo&&!eo&&okZh(t,ev)&&okEn(t,zv)){zo=eo=true}  // 中英填反也算對
   $("f-zh").className="field "+(zo?"ok":"bad"); $("f-en").className="field "+(eo?"ok":"bad");
   $("a-zh").textContent=(zo?"✓ ":"✗ 答案：")+t.zh; $("a-en").textContent=(eo?"✓ ":"✗ 答案：")+t.en;
   const s=st(t.id); s.n++; const both=zo&&eo;
